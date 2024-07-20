@@ -8,6 +8,8 @@
 
 ## Installation
 
+Codes for scTrace will be released soon!
+
 The `scTrace` python package can be installed directly via pip:
 ```
 pip install scTrace

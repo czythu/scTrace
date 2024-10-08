@@ -1,7 +1,7 @@
 import gc
 import pickle
-from scLTMF import scLTMF
-from utils import *
+from .scLTMF import scLTMF
+from .utils import *
 import scStateDynamics as scd
 
 

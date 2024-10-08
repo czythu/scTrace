@@ -14,7 +14,7 @@ pip install scStateDynamics
 pip install node2vec
 ```
 
-The Release version of `scTrace` python package will be updated soon. It can be installed directly via pip:
+The Release version of scTrace python package will be updated soon. It can be installed directly via pip:
 ```
 pip install scTrace
 ```

@@ -12,6 +12,7 @@ from node2vec import Node2Vec
 from scipy.stats import ranksums, mannwhitneyu
 from tqdm import trange
 from collections import Counter
+import pickle
 
 
 def preProcess(scobj, n_hvgs=2000, log_normalize=True):
@@ -836,3 +837,13 @@ def calculateFateDiversity(adata, n_neighbors=5):
     return summary_metric, ncs, jics, ecs
 
 
+class CustomUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        # Suppose we need to remap 'old_module_name' to 'new_module_name'
+        if module == 'scLTMF':
+            module = 'scTrace.scLTMF'
+        return super().find_class(module, name)
+
+def load_model(filename):
+    with open(filename, 'rb') as f:
+        return CustomUnpickler(f).load()

@@ -1,5 +1,4 @@
 import gc
-import pickle
 from .scLTMF import scLTMF
 from .utils import *
 import scStateDynamics as scd
@@ -104,8 +103,9 @@ def trainMF(train_df, val_df, n_pre, n_pos, savePath, run_label_time,
 
 def predictMissingEntries(pre_name, pos_name, savePath, run_label_time, showName, threshold_positive=0.25):
     print("Loading pretrained model...")
-    with open(savePath + run_label_time + '_model.pkl', 'rb') as file:
-        model = pickle.load(file)
+    # with open(savePath + run_label_time + '_model.pkl', 'rb') as file:
+    #     model = pickle.load(file)
+    model = load_model(savePath + run_label_time + '_model.pkl')
     min_rmse, max_recall = plot_metrics(model, savePath, run_label_time, showName + ': ' + pre_name + '->' + pos_name)
     y_true = model.train[:, 2]
     y_true_val = model.val[:, 2]

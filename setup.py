@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup( 
 	name="scTrace", 
-	version="0.0.1", 
+	version="0.1.1",
 	author="Zeyu Chen", 
 	author_email="chenzy22@mails.tsinghua.edu.cn", 
     packages=find_packages(),
@@ -28,5 +28,8 @@ setup(
     	"scanpy",
     	"leidenalg",
     	"pyro-ppl",
-    	"POT"] 
+    	"POT",
+		"node2vec",
+		"scStateDynamics"
+	]
 ) 

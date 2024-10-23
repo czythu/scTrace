@@ -1,5 +1,7 @@
 # scTrace+
 
+[![PyPI version](https://badge.fury.io/py/scTrace.svg)](https://pypi.org/project/scTrace/)
+
 ## Introduction
 `scTrace+` is a computational method to enhance single-cell lineage tracing data through the kernelized bayesian network.
 
@@ -8,21 +10,23 @@
 
 ## Installation
 
-Currently, we provided the develop version of scTrace+. After installing `scStateDynamics` and `node2vec`,
-you can run our demo to perform LT-scSeq data enhancement and cell fate inference steps.
-```
-pip install scStateDynamics
-pip install node2vec
-```
-
-The Release version and tutorial of `scTrace+` python package will be updated soon. It can be installed directly via pip:
+The Release version `scTrace+` python package can be installed directly via pip:
 ```
 pip install scTrace
 ```
 
+Besides, we provided the develop version of scTrace+. After installing `scStateDynamics` and `node2vec`,
+you can run our [tutorial](https://github.com/czythu/scTrace/tree/main/tutorial) 
+to perform LT-scSeq data enhancement and cell fate inference steps.
+```
+pip install scStateDynamics
+pip install node2vec
+git clone https://github.com/czythu/scTrace.git
+```
+
 ## Quick Start of LT-scSeq data enhancement
 
-Refer to tutorial/Larry-InvitroDiff.ipynb for full pipeline.
+Refer to folder: [tutorial](https://github.com/czythu/scTrace/tree/main/tutorial) for full pipeline.
 
 Below are the introduction to important functions, consisting of the main steps in `scTrace+`.
 

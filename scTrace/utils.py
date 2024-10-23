@@ -112,53 +112,6 @@ def getCrossLineageDensity(cross_lin_mat):
     return n2 / n1, n4 / n3
 
 
-'''
-def plotSimilarityCompare_vln(cross_sim, cross_lin_mat, title, savePath):
-
-    plt.figure(figsize=(3.5, 2.5), dpi=300)
-    # plt.figure(figsize=(5, 4), dpi=300)
-
-    within_clone = coo_matrix(np.multiply(cross_sim, cross_lin_mat)).data
-    other_value = coo_matrix(np.multiply(cross_sim, 1 - cross_lin_mat)).data
-    data = [within_clone, other_value]
-    labels = ['Lineage', 'Others']
-    sns.violinplot(data=data)
-    plt.xticks([0, 1], labels)
-#     plt.hist(within_clone, color='#A8CFE8', fill='#A8CFE8', density=True, log=True,
-#              bins=20, alpha=0.6, label='Lineage')
-#     plt.hist(other_value,color='#F9DF91', fill='#F9DF91', density=True, log=True,
-#              bins=20, alpha=0.6, label='Others')
-#     stat, p_value = ranksums(within_clone, other_value, alternative='greater')
-#     # 根据p值添加显著性标注
-#     if p_value > 0.05:
-#         significance = 'ns'
-#     elif p_value <= 0.0001:
-#         significance = '****'
-#     elif p_value <= 0.001:
-#         significance = '***'
-#     elif p_value <= 0.01:
-#         significance = '**'
-#     else:
-#         significance = '*'
-
-    # plt.ylabel('Number (log-scale)')
-    # plt.xlabel('Pearson correlation coefficients')
-    plt.title(title)
-    plt.legend()
-
-    # 在图中添加显著性标注
-#     y, h, col = data[1].max() + 1, 1, 'k'
-#     plt.plot([0, 0, 1, 1], [y, y+h, y+h, y], lw=1.5, c=col)
-#     plt.text(0.5, y+h, significance, ha='center', va='bottom', color=col)
-
-    plt.show()
-
-    plt.tight_layout()
-    plt.savefig(savePath)
-    # plt.close()
-'''
-
-
 def plotSimilarityCompare(cross_sim, cross_lin_mat, title, savePath):
     plt.figure(figsize=(3.5, 2.5), dpi=300)
     # plt.figure(figsize=(5, 4), dpi=300)
@@ -213,52 +166,6 @@ def inv_node2vec_kernel(adj_matrix):
     return K_inv
 
 
-'''
-def getSimilarityPix(sim_mat, run_type, data_pre, data_pos, metadata="lineage_barcode"):
-    barcodes_pre = data_pre.obs[metadata].unique().tolist()
-    barcodes_pre.remove(np.nan)
-    barcodes_pos = data_pos.obs[metadata].unique().tolist()
-    barcodes_pos.remove(np.nan)
-    comm_barcodes = list(set(barcodes_pre).intersection(set(barcodes_pos)))
-
-    corr_bg = get1DMat(sim_mat, run_type='single')
-
-    if run_type == 'cross':
-        cur_barcodes = comm_barcodes
-    else:
-        if run_type == 'pre':
-            cur_barcodes = barcodes_pre
-        elif run_type == 'pos':
-            cur_barcodes = barcodes_pos
-    corr_bg_pv = np.percentile(corr_bg, np.arange(0, 100, 1))
-
-    pre_bars = data_pre.obs[metadata]
-    pos_bars = data_pos.obs[metadata]
-    if run_type == 'pre':
-        pos_bars = data_pre.obs[metadata]
-    elif run_type == 'pos':
-        pre_bars = data_pos.obs[metadata]
-
-    clone_sim_pix = []
-    for bar in cur_barcodes:
-        cur_sims = sim_mat[np.ix_(pre_bars == bar, pos_bars == bar)]
-        ix_ps = [sum(corr_bg_pv < x) for x in get1DMat(cur_sims, run_type=run_type)]
-        clone_sim_pix.append(np.mean(ix_ps) / 100)
-
-    clone_anno = pd.DataFrame({'clone_sim_percentage': clone_sim_pix}, index=cur_barcodes)
-    if run_type != 'pos':
-        clone_anno['clone_size_pre'] = [sum(data_pre.obs[metadata] == x) for x in cur_barcodes]
-    if run_type != 'pre':
-        clone_anno['clone_size_pos'] = [sum(data_pos.obs[metadata] == x) for x in cur_barcodes]
-
-    return clone_anno
-'''
-
-
-def getCrossIntegrMat(cross_lin_mat, cross_sim, addZeros=True, addZeros_thres=0.5):
-    pass
-
-
 def train_valid_split(data, ratio, type="stratified"):
     print("Splitting train-validation set")
     sparse_mat_len = data.shape[0]
@@ -283,17 +190,13 @@ def train_valid_split(data, ratio, type="stratified"):
 
 
 def grid_search(model, train_df, val_df, n_pre_cell, n_post_cell, n_factor, n_epoch, Su, Sv,
-                bool_pre_side=True, bool_post_side=True):
+                bool_pre_side=True, bool_post_side=True, learning_rate=0.01, regularization=0.0001):
     params = {'regularization': 0.3, 'n_factors': n_factor, 'n_epochs': n_epoch}
     result = {'min_val': 999, 'lr': None, 'reg': None}
     # for lr in [0.1, 0.05, 0.01]:# , 0.005, 0.0001]:
-    for lr in [0.01]:
-        #    for reg in [1, 0.1, 0.01, 0.001, 0.0001]:
-        for reg in [0.0001]:
-            # for reg in [0.00005]:
-            # Watermelon: (0.01, 0.0001), TraceSeq: (0.01, 0.0001), Larry in vitro day4-6: (0.01, 0.0001)
-            # C-elegans 300min-400min: (0.01, 0.0001), 400min-500min: (0.01, 0.00005)
-            # CellTagging: (0.01, 0.0001), JMML-TCR: (0.01, 0.0001)
+    for lr in [learning_rate]:
+        #    for reg in [1, 0.1, 0.01, 0.001, 0.0001, 0.00005]:
+        for reg in [regularization]:
             params['learning_rate'] = lr
             params['regularization'] = reg
             m = model(**params)
@@ -411,22 +314,6 @@ def plotFittingResults(pred_mat, y_pred, y_true, y_pred_val, y_true_val, pre_nam
     plt.savefig(savePath + run_label_time + '-NonMissingMatValues-truth-hist.png')
 
     return corr
-
-
-'''
-def ablation_experiment(Ku_inv, Kv_inv):
-    # Generate diagonal matrix
-    Ku_inv_diag = np.diag(np.diagonal(Ku_inv))
-    Kv_inv_diag = np.diag(np.diagonal(Kv_inv))
-    print(Ku_inv_diag.shape, Kv_inv_diag.shape)
-    # Check whether Ku_inv is diagonal: FALSE
-    print(np.count_nonzero(Ku_inv - Ku_inv_diag), np.count_nonzero(Kv_inv - Kv_inv_diag))
-    # Generate identity matrix
-    Ku_inv_iden = np.eye(Ku_inv_diag.shape[0])
-    Kv_inv_iden = np.eye(Kv_inv_diag.shape[0])
-    print(Ku_inv_iden.shape, Kv_inv_iden.shape)
-    return Ku_inv_diag, Kv_inv_diag, Ku_inv_iden, Kv_inv_iden
-'''
 
 
 def sigmoid(x):

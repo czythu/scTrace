@@ -7,7 +7,6 @@ import scStateDynamics as scd
 def prepareCrosstimeGraph(data_pre, data_pos, lineage_identity, pre_name, pos_name,
                             savePath, run_label_time):
     cross_sim = getSimilarityMatrix(data_pre, data_pos, method = 'Pearson')
-    # lineage_identity = 'Clone' in LARRY
     barcodes_pre, barcodes_pos = list(data_pre.obs[lineage_identity]), list(data_pos.obs[lineage_identity])
     cross_lin_mat, clonotype_mat = getLineageMatrix(bars = barcodes_pre, bars2 = barcodes_pos)
     getCrossLineageDensity(cross_lin_mat)
@@ -50,32 +49,23 @@ def prepareSideInformation(data_pre, data_pos, barcodes_pre, barcodes_pos,
     pre_sim_mat = single_inte_fraction * np.array(data_pre.obsp['connectivities'].todense()) + (1 - single_inte_fraction) * pre_lin_mat
     pos_sim_mat = single_inte_fraction * np.array(data_pos.obsp['connectivities'].todense()) + (1 - single_inte_fraction) * pos_lin_mat
     Ku_inv = inv_node2vec_kernel(pre_sim_mat)
-    # np.save(savePath + run_label_time + '-Ku_inv_down50.npy', Ku_inv)
     np.save(savePath + run_label_time + '-Ku_inv.npy', Ku_inv)
     Kv_inv = inv_node2vec_kernel(pos_sim_mat)
-    # np.save(savePath + run_label_time + '-Kv_inv_down50.npy', Kv_inv)
     np.save(savePath + run_label_time + '-Kv_inv.npy', Kv_inv)
     del(pre_sim_mat, pos_sim_mat)
     gc.collect()
 
 # epoch in train
 def trainMF(train_df, val_df, n_pre, n_pos, savePath, run_label_time,
-            n_factor=20, n_epoch=400, bool_pre_side=True, bool_post_side=True):
-    # Ku_inv = np.load(savePath + run_label_time + '-Ku_inv_down50.npy')
-    # Kv_inv = np.load(savePath + run_label_time + '-Kv_inv_down50.npy')
-    print("Loading side information")    # (lr, reg) in grid_research
-    # Watermelon: (0.01, 0.0001), TraceSeq: (0.01, 0.0001), Larry in vitro day4-6: (0.01, 0.0001)
-    # C-elegans 300min-400min: (0.01, 0.0001), 400min-500min: (0.01, 0.00005)
-    # CellTagging: (0.01, 0.0001), JMML-TCR: (0.01, 0.0001)
+            n_factor=20, n_epoch=400, bool_pre_side=True, bool_post_side=True,
+            learning_rate=0.01, regularization=0.0001):
+    print("Loading side information")
     Ku_inv = np.load(savePath + run_label_time + '-Ku_inv.npy')
     Kv_inv = np.load(savePath + run_label_time + '-Kv_inv.npy')
-    # (lr, reg) in grid_research
-    # Watermelon: (0.01, 0.0001), TraceSeq: (0.01, 0.0001), Larry in vitro day4-6: (0.01, 0.0001)
-    # C-elegans 300min-400min: (0.01, 0.0001), 400min-500min: (0.01, 0.00005)
-    # CellTagging: (0.01, 0.0001), JMML-TCR: (0.01, 0.0001)
     print("Performing matrix factorization")
     hyper_dict, model = grid_search(scLTMF, train_df.iloc[:,:3], val_df.iloc[:,:3], n_pre, n_pos, n_factor, n_epoch,
-                                    Ku_inv, Kv_inv, bool_pre_side=bool_pre_side, bool_post_side=bool_post_side)
+                                    Ku_inv, Kv_inv, bool_pre_side=bool_pre_side, bool_post_side=bool_post_side,
+                                    learning_rate=learning_rate, regularization=regularization)
     # Ablation experiment
     if bool_pre_side == True and bool_post_side == False:
         run_label_time = run_label_time + '_keepSu'
@@ -127,9 +117,6 @@ def prepareScdobj(data_pre, data_pos, time, pre_name, pos_name, cls_res_all, clq
     scd_obj = scd.scStateDynamics(data_pre = data_pre, data_pos = data_pos, pre_name = pre_name, pos_name = pos_name,
                                   cls_prefixes = ['', ''], run_label = run_label_time, pre_colors = pre_colors,
                                   pos_colors = pos_colors, savePath = savePath, saveFigFormat = "png")
-    # scd_obj = scStateDynamics(data_pre = data_pre, data_pos = data_pos, pre_name = pre_name, pos_name = pos_name,
-    #                               cls_prefixes = ['', ''], run_label = run_label_time, pre_colors = pre_colors,
-    #                               pos_colors = pos_colors, savePath = savePath, saveFigFormat = "png")
     scd_obj.runClustering(cls_resolutions = [cls_res_pre, cls_res_pos], clq_resolutions = [clq_res_pre, clq_res_pos])
 
     return scd_obj
@@ -257,21 +244,16 @@ def enhanceFate(scd_obj, complete_mat, savePath, run_label_time,
                     else:
                         print("Please choose method from ['ranksum', 'meanwhit']")
                     p_value_list.append(cur_p_value)
-                    # if cur_p_value < 0.05:
-                    #     # print(cur_p_value)
-                    #     cur_res = str(jj)
+
         if len(p_value_list) > 0:
             if cutoff == True:
                 if np.min(p_value_list) < 0.05:
-                    # cur_res = str(np.argmin(np.array(p_value_list)))
                     cur_res = pos_celltypes[np.argmin(np.array(p_value_list))]
             else:
-                # cur_res = str(np.argmin(np.array(p_value_list)))
                 cur_res = pos_celltypes[np.argmin(np.array(p_value_list))]
 
         cell_fate_cls.append(cur_res)
 
-#     print(np.unique(cell_fate_cls, return_counts=True))
 
     adata_pre.obs[enhanced_fate_colname] = adata_pre.obs[lineage_fate_colname].astype('str')
 

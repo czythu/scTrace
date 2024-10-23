@@ -22,7 +22,7 @@ pip install scTrace
 
 ## Quick Start of LT-scSeq data enhancement
 
-Refer to demo/xxx.ipynb for full pipeline, which will be uploaded soon.
+Refer to tutorial/Larry-InvitroDiff.ipynb for full pipeline.
 
 Below are the introduction to important functions, consisting of the main steps in `scTrace+`.
 
@@ -42,3 +42,5 @@ and transcriptome similarity matrices, both within and across timepoints.
 7. `assignLineageInfo`: Assign fate information at single-cell level and output a `cell2cluster` matrix according to lineage information.
 
 8. `enhanceFate`: Enhance cell fate information based on hypothesis testing method for single-cell level fate inference.
+
+9. `runFateDE`: Perform differential expression analysis between dynamic sub-clusters.

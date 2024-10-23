@@ -184,59 +184,170 @@ def visualizeEnhancedLineageInfo(scd_obj, complet_mat, n_pre, pre_colors, pos_co
     return cls_trans_mat, flow_info
 
 
-def assignLineageInfo(scd_obj, cross_lin_mat, savePath, run_label_time):
-    cell_2lin_cls = np.array([(cross_lin_mat[:,
-                               np.where(scd_obj.data_pos.obs['cluster'] == str(j))[0]] > 0).sum(axis=1).tolist()
-                              for j in range(scd_obj.n_clus[1])]).T
-    fate_cls = np.argmax(cell_2lin_cls, axis=1).astype(str)
-    fate_cls[np.sum(cell_2lin_cls, axis=1) == 0] = 'offTarget'
-    scd_obj.data_pre.obs['Fate_cls'] = fate_cls
-    fate_cls = scd_obj.data_pre.obs['cluster'].astype(str) + '->' + fate_cls
-    fate_cls[np.sum(cell_2lin_cls, axis=1) == 0] = 'offTarget'
-    scd_obj.data_pre.obs['Fate'] = fate_cls
-    print(np.unique(scd_obj.data_pre.obs['Fate'], return_counts=True))
+def assignLineageInfo(scd_obj, cross_lin_mat, savePath, run_label_time, sel_cluster_name="cluster"):
+    pos_celltypes = scd_obj.data_pos.obs[sel_cluster_name]
+    cell_2lin_cls = np.array([(cross_lin_mat[:, np.where(pos_celltypes == celltype)[0]] > 0).sum(axis=1).tolist()
+                              for celltype in np.unique(pos_celltypes)]).T
+
+    fate_cls = np.unique(pos_celltypes)[np.argmax(cell_2lin_cls, axis=1)]  # .astype(str)
+    fate_cls[np.sum(cell_2lin_cls, axis=1) == 0] = 'Missing'
+    scd_obj.data_pre.obs['Lineage_fate'] = fate_cls
+
+    fate_cls = scd_obj.data_pre.obs[sel_cluster_name].astype(str) + ' -> ' + fate_cls
+    fate_cls[np.sum(cell_2lin_cls, axis=1) == 0] = 'Missing'
+    scd_obj.data_pre.obs['Lineage_fate_label'] = fate_cls
+    print(scd_obj.data_pre.obs['Lineage_fate'].value_counts())
+    print(scd_obj.data_pre.obs['Lineage_fate_label'].value_counts())
+
     # cfrs, afs = compute_fate_vector(scd_obj, cross_lin_mat)
-    cfrs, afs = compute_fate_vector(scd_obj.data_pre, cell_2lin_cls)
-    summary_metric, ncs, jics, ecs = calculateFateDiversity(scd_obj.data_pre)
-    plotCellFate(scd_obj.data_pre, savePath, run_label_time)
-    with plt.rc_context({'figure.figsize': (3, 3)}):
-        color_temp = ["#43D9FE", "#E78AC3", "#FEC643", "#A6D854","#FE6943", "#E5C494", "#33AEB1", "#FFEC1A","#66C2A5", "#FC8D62"]
-        sc.pl.umap(scd_obj.data_pos, color="cluster", palette=color_temp, show=False)
-    plt.savefig(savePath + run_label_time + '_pos_cluster.png', dpi=300, bbox_inches='tight')
-    return scd_obj, summary_metric, ncs, jics, ecs, cfrs, afs
+    cfrs, afs = compute_fate_vector(scd_obj.data_pre, cell_2lin_cls, fate_cls_name="Lineage_fate")
+    ncs, ecs = calculateFateDiversity(scd_obj.data_pre, fate_cls_name="Lineage_fate")
+    plotCellFate(scd_obj.data_pre, savePath, run_label_time, cls_colname=sel_cluster_name, fate_colname='Lineage_fate_label',
+                 special_case="Missing", png_name="_cellfate-umap-onlyLT.png")
+    return scd_obj, [ncs, ecs, cfrs, afs]
 
 
-def enhanceLineageInfo(scd_obj, cross_lin_mat, complet_mat):
-    cell_2lin_cls = np.array([(cross_lin_mat[:,
-                               np.where(scd_obj.data_pos.obs['cluster'] == str(j))[0]] > 0).sum(axis=1).tolist() for j
-                              in range(scd_obj.n_clus[1])]).T
-    fate_cls = np.argmax(cell_2lin_cls, axis=1).astype(str)
-    fate_cls[np.sum(cell_2lin_cls, axis=1) == 0] = 'offTarget'
-    scd_obj.data_pre.obs['Fate_cls'] = fate_cls
-    scd_obj, enhance_rate = assignFate(scd_obj, complete_mat=complet_mat)
-    # print(np.unique(scd_obj.data_pre.obs['Fate'], return_counts=True))
-    summary_metric, ncs, jics, ecs = calculateFateDiversity(scd_obj.data_pre)
-    return scd_obj, summary_metric, ncs, jics, ecs
+def enhanceFate(scd_obj, complete_mat, savePath, run_label_time,
+                cluster_name="cluster", lineage_fate_colname = 'Lineage_fate',
+                enhanced_fate_colname = 'Enhanced_fate', cutoff=True, method="ranksum"):
+    adata_pre, adata_pos = scd_obj.data_pre, scd_obj.data_pos
+    # Select non-zero values from completed matrix
+    pos_celltypes = np.unique(adata_pos.obs[cluster_name])
+    values_nz = [[row[row != 0] for row in complete_mat[:, adata_pos.obs[cluster_name] == pos_celltype]]
+                 for pos_celltype in pos_celltypes]
+
+    cell_fate_cls = []
+    num_pos_clusters = len(values_nz)
+    for ii in trange(complete_mat.shape[0]):
+        # number of cells in pre-data
+        # print(ii)
+        # non-zero values in transition matrix for all clusters
+        cell_ii_values = [values_nz[jj][ii] for jj in range(num_pos_clusters)]
+        cur_res = 'Uncertain'
+        # number of clusters in post-data
+        p_value_list = []
+        for jj in range(num_pos_clusters):
+            cur_values = cell_ii_values[jj]
+            if len(cur_values) > 0:
+                # other_vals = [x for j2 in range(num_pos_clusters) for x in values_nz[j2][jj] if j2 != 0]
+                other_vals = np.array([x for j2 in range(num_pos_clusters) for x in cell_ii_values[j2] if j2 != jj])
+                if len(other_vals) == 0:
+                    # cur_res = str(jj)
+                    cur_res = pos_celltypes[jj]
+                    break
+                else:
+                    cur_p_value = 1
+                    if method == "ranksum":
+                        '''
+                        Compute the Wilcoxon rank-sum statistic for two samples.
+                        The Wilcoxon rank-sum test tests the null hypothesis that two sets of measurements are drawn
+                        from the same distribution.
+                        The alternative hypothesis is that values in one sample are more likely to be larger than the values
+                        in the other sample.
+                        '''
+                        cur_statistic, cur_p_value = ranksums(cur_values, other_vals, alternative='greater')
+                    elif method == "meanwhit":
+                        '''
+                        Perform the Mann-Whitney U rank test on two independent samples.
+                        The Mann-Whitney U test is a nonparametric test of the null hypothesis that the distribution
+                        underlying sample x is the same as the distribution underlying sample y.
+                        It is often used as a test of difference in location between distributions.
+                        '''
+                        cur_statistic, cur_p_value = mannwhitneyu(cur_values, other_vals, use_continuity=True, alternative='greater')
+                    else:
+                        print("Please choose method from ['ranksum', 'meanwhit']")
+                    p_value_list.append(cur_p_value)
+                    # if cur_p_value < 0.05:
+                    #     # print(cur_p_value)
+                    #     cur_res = str(jj)
+        if len(p_value_list) > 0:
+            if cutoff == True:
+                if np.min(p_value_list) < 0.05:
+                    # cur_res = str(np.argmin(np.array(p_value_list)))
+                    cur_res = pos_celltypes[np.argmin(np.array(p_value_list))]
+            else:
+                # cur_res = str(np.argmin(np.array(p_value_list)))
+                cur_res = pos_celltypes[np.argmin(np.array(p_value_list))]
+
+        cell_fate_cls.append(cur_res)
+
+#     print(np.unique(cell_fate_cls, return_counts=True))
+
+    adata_pre.obs[enhanced_fate_colname] = adata_pre.obs[lineage_fate_colname].astype('str')
+
+    # Supplement cell fate relationships that have not been captured by lineage-tracing
+    count_offtarget, count_enhance = 0, 0
+    for i in range(len(adata_pre.obs[enhanced_fate_colname])):
+        if adata_pre.obs[enhanced_fate_colname][i] == "Missing":
+            count_offtarget += 1
+            adata_pre.obs[enhanced_fate_colname][i] = cell_fate_cls[i]
+            if cell_fate_cls[i] != "Uncertain":
+                count_enhance += 1
+    enhance_rate = count_enhance / count_offtarget
+    print("Ratio of newly added fate clusters: {:.4f}".format(enhance_rate))
+
+    # scd_obj.data_pre.obs['Fate_cls'] = cell_fate_cls
+    adata_pre.obs[cluster_name] = adata_pre.obs[cluster_name].astype('str')
+    adata_pre.obs[enhanced_fate_colname+'_label'] = adata_pre.obs[cluster_name] + ' -> ' + adata_pre.obs[enhanced_fate_colname]
+    adata_pre.obs.loc[adata_pre.obs[enhanced_fate_colname+'_label'].str.contains('Uncertain', case=False), enhanced_fate_colname+'_label'] = 'Uncertain'
+
+    plotCellFate(adata_pre, savePath, run_label_time, cls_colname='Cell type annotation',
+                 fate_colname='Enhanced_fate_label',
+                 special_case="Uncertain", png_name="_cellfate-umap-enhanced.png")
+
+    return adata_pre, enhance_rate
 
 
-def originalDynamicAnalysis(scd_obj, savePath, run_label_time):
+def runFateDE(adata_pre, fate_colname, sel_cls, sel_fates, saveName, filter_signif=True):
     all_de_df = pd.DataFrame()
-    for si in range(scd_obj.n_clus[0]):
-        cur_expr = scd_obj.data_pre[scd_obj.data_pre.obs['cluster'] == str(si)]
-        cur_expr = cur_expr[cur_expr.obs['Fate_cls'] != 'offTarget']
+    cur_expr = adata_pre[adata_pre.obs[fate_colname].isin(sel_fates)]
 
-        t_v, t_n = np.unique(cur_expr.obs['Fate_cls'], return_counts=True)
+    t_v, t_n = np.unique(cur_expr.obs[fate_colname], return_counts=True)
+    print(t_v, t_n)
+
+    if np.all(t_n > 1) == False:
+        mask = np.isin(np.array(cur_expr.obs[sel_fates]), t_v[np.argwhere(t_n > 1).flatten()])
+        cur_expr = cur_expr[np.where(mask)[0]]
+        t_v, t_n = np.unique(cur_expr.obs[sel_fates], return_counts=True)
+        print(t_v, t_n)
+
+    try:
+        # cur_expr.uns['log1p']["base"] = None
+        sc.tl.rank_genes_groups(cur_expr, groupby=fate_colname, method='wilcoxon')
+        subfates = [name for name, _ in cur_expr.uns['rank_genes_groups']['names'].dtype.fields.items()]
+        for i in range(len(subfates)):
+            de_df = generateDEGs(cur_expr, index=i, cluster=sel_cls, fate_str=subfates[i], filter_signif=filter_signif)
+            all_de_df = pd.concat([all_de_df, de_df], axis=0)
+
+    except ZeroDivisionError as e:
+        print(e)
+
+    if all_de_df.shape[0] > 0:
+        all_de_df.to_csv(saveName, sep='\t', header=True, index=False)
+
+    return cur_expr, all_de_df
+
+
+def dynamicDiffAnalysis(scd_obj, savePath, run_label_time,
+                        sel_cluster_name="cluster", fate_colname='Lineage_fate', special_case="Missing"):
+    all_de_df = pd.DataFrame()
+    pre_celltypes = np.unique(scd_obj.data_pre.obs[sel_cluster_name])
+    for si in pre_celltypes:
+        cur_expr = scd_obj.data_pre[scd_obj.data_pre.obs[sel_cluster_name] == str(si)]
+        cur_expr = cur_expr[cur_expr.obs[fate_colname] != special_case]
+
+        t_v, t_n = np.unique(cur_expr.obs[fate_colname], return_counts=True)
         print(t_v, t_n)
         if np.all(t_n > 1) == False:
             # mask = np.isin(np.array(cur_expr.obs['Fate_cls']), np.argwhere(t_n > 1).flatten().astype(str))
-            mask = np.isin(np.array(cur_expr.obs['Fate_cls']), t_v[np.argwhere(t_n > 1).flatten()])
+            mask = np.isin(np.array(cur_expr.obs[fate_colname]), t_v[np.argwhere(t_n > 1).flatten()])
             cur_expr = cur_expr[np.where(mask)[0]]
-            t_v, t_n = np.unique(cur_expr.obs['Fate_cls'], return_counts=True)
+            t_v, t_n = np.unique(cur_expr.obs[fate_colname], return_counts=True)
             print(t_v, t_n)
         try:
-            sc.tl.rank_genes_groups(cur_expr, groupby='Fate_cls', method='wilcoxon')
+            sc.tl.rank_genes_groups(cur_expr, groupby=fate_colname, method='wilcoxon')
             # Select genes
-            for i, f in enumerate(cur_expr.obs['Fate_cls'].unique()):
+            for i, f in enumerate(cur_expr.obs[fate_colname].unique()):
                 fate_str = str(si) + '->' + str(f)
                 de_df = generateDEGs(cur_expr, index=i, cluster=si, fate_str=fate_str)
                 print(de_df.shape)
@@ -246,58 +357,9 @@ def originalDynamicAnalysis(scd_obj, savePath, run_label_time):
             print(e)
 
     if all_de_df.shape[0] > 0:
-        all_de_df.to_csv(savePath + run_label_time + '_DE_fate_genes-S0-T0_onlyLT.txt',
-                         sep='\t', header=True, index=False)
-
-    p_data = pd.DataFrame({'UMAP_1': scd_obj.data_pre.obsm['X_umap'][:, 0],
-                           'UMAP_2': scd_obj.data_pre.obsm['X_umap'][:, 1],
-                           'Cluster': scd_obj.data_pre.obs['cluster'],
-                           'Fate': list(scd_obj.data_pre.obs['Fate'])})
-    p_data = p_data.sort_values(by='Fate', axis=0, ascending=True)
-    p_data.to_csv(savePath + run_label_time + '_lineageFate_df.txt', sep='\t', header=True, index=False)
-
-    # plotCellFate(scd_obj.data_pre, savePath, run_label_time)
-
+        if fate_colname == "Lineage_fate":
+            all_de_df.to_csv(savePath + run_label_time + '_DE_all_fate_genes-onlyLT.txt', sep='\t', header=True, index=False)
+        else:
+            all_de_df.to_csv(savePath + run_label_time + '_DE_all_fate_genes-enhanced.txt', sep='\t', header=True, index=False)
     return all_de_df
 
-
-def enhancedDynamicAnalysis(scd_obj, savePath, run_label_time):
-    all_de_df = pd.DataFrame()
-    for si in range(scd_obj.n_clus[0]):
-        cur_expr = scd_obj.data_pre[scd_obj.data_pre.obs['cluster'] == str(si)]
-        cur_expr = cur_expr[cur_expr.obs['Fate_cls'] != 'Uncertain']
-        t_v, t_n = np.unique(cur_expr.obs['Fate_cls'], return_counts=True)
-        print(t_v, t_n)
-        if np.all(t_n > 1) == False:
-            # mask = np.isin(np.array(cur_expr.obs['Fate_cls']), np.argwhere(t_n > 1).flatten().astype(str))
-            mask = np.isin(np.array(cur_expr.obs['Fate_cls']), t_v[np.argwhere(t_n > 1).flatten()])
-            cur_expr = cur_expr[np.where(mask)[0]]
-            t_v, t_n = np.unique(cur_expr.obs['Fate_cls'], return_counts=True)
-            print(t_v, t_n)
-        try:
-            sc.tl.rank_genes_groups(cur_expr, groupby='Fate_cls', method='wilcoxon')
-            # Select genes
-            for i, f in enumerate(cur_expr.obs['Fate_cls'].unique()):
-                fate_str = str(si) + '->' + str(f)
-                de_df = generateDEGs(cur_expr, index=i, cluster=si, fate_str=fate_str)
-                print(de_df.shape)
-                all_de_df = pd.concat([all_de_df, de_df], axis=0)
-
-        except ZeroDivisionError as e:
-            print(e)
-
-    if all_de_df.shape[0] > 0:
-        all_de_df.to_csv(savePath + run_label_time + '_DE_fate_genes-S0-T0_1.txt', sep='\t', header=True, index=False)
-
-    p_data = pd.DataFrame({'UMAP_1': scd_obj.data_pre.obsm['X_umap'][:, 0],
-                           'UMAP_2': scd_obj.data_pre.obsm['X_umap'][:, 1],
-                           'Cluster': scd_obj.data_pre.obs['cluster'],
-                           'Fate': list(scd_obj.data_pre.obs['Fate_cls'])})
-    p_data = p_data.sort_values(by='Fate', axis=0, ascending=True)
-    p_data.to_csv(savePath + run_label_time + '_predFate_df.txt', sep='\t', header=True, index=False)
-
-    plotCellFate(scd_obj.data_pre, savePath, run_label_time,
-                 special_case=tuple(np.unique(scd_obj.data_pre.obs["cluster"]) + "->Uncertain"),
-                 png_name='_cellfate-umap-aftermc.png')
-
-    return all_de_df

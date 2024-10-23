@@ -586,131 +586,50 @@ def plotFlowSankey(flow_info, pre_colors, pos_colors, pre_fractions=None, pos_fr
     return (fig)
 
 
-def assignFate(scd_obj, complete_mat, cutoff=True, method="ranksum", cluster_name="cluster"):
-    # Select non-zero values from completed matrix
-    values_nz = [[row[row != 0] for row in complete_mat[:, scd_obj.data_pos.obs[cluster_name] == str(jj)]] for jj in
-                 trange(scd_obj.n_clus[1])]
-
-    cell_fate_cls = []
-    num_pos_clusters = len(values_nz)
-    for ii in trange(complete_mat.shape[0]):
-        # number of cells in pre-data
-        # print(ii)
-        # non-zero values in transition matrix for all clusters
-        cell_ii_values = [values_nz[jj][ii] for jj in range(num_pos_clusters)]
-        cur_res = 'Uncertain'
-        # number of clusters in post-data
-        p_value_list = []
-        for jj in range(num_pos_clusters):
-            cur_values = cell_ii_values[jj]
-            if len(cur_values) > 0:
-                # other_vals = [x for j2 in range(num_pos_clusters) for x in values_nz[j2][jj] if j2 != 0]
-                other_vals = np.array([x for j2 in range(num_pos_clusters) for x in cell_ii_values[j2] if j2 != jj])
-                if len(other_vals) == 0:
-                    cur_res = str(jj)
-                    break
-                else:
-                    cur_p_value = 1
-                    if method == "ranksum":
-                        '''
-                        Compute the Wilcoxon rank-sum statistic for two samples.
-                        The Wilcoxon rank-sum test tests the null hypothesis that two sets of measurements are drawn
-                        from the same distribution.
-                        The alternative hypothesis is that values in one sample are more likely to be larger than the values
-                        in the other sample.
-                        '''
-                        cur_statistic, cur_p_value = ranksums(cur_values, other_vals, alternative='greater')
-                    elif method == "meanwhit":
-                        '''
-                        Perform the Mann-Whitney U rank test on two independent samples.
-                        The Mann-Whitney U test is a nonparametric test of the null hypothesis that the distribution
-                        underlying sample x is the same as the distribution underlying sample y.
-                        It is often used as a test of difference in location between distributions.
-                        '''
-                        cur_statistic, cur_p_value = mannwhitneyu(cur_values, other_vals, use_continuity=True,
-                                                                  alternative='greater')
-                    else:
-                        print("Please choose method from ['ranksum', 'meanwhit']")
-                    p_value_list.append(cur_p_value)
-                    # if cur_p_value < 0.05:
-                    #     # print(cur_p_value)
-                    #     cur_res = str(jj)
-        if len(p_value_list) > 0:
-            if cutoff == True:
-                if np.min(p_value_list) < 0.05:
-                    cur_res = str(np.argmin(np.array(p_value_list)))
-            else:
-                cur_res = str(np.argmin(np.array(p_value_list)))
-
-        cell_fate_cls.append(cur_res)
-
-    # print(np.unique(cell_fate_cls, return_counts=True))
-
-    scd_obj.data_pre.obs['Fate_cls'] = scd_obj.data_pre.obs['Fate_cls'].astype('str')
-
-    # Supplement cell fate relationships that have not been captured by lineage-tracing
-    count_offtarget, count_enhance = 0, 0
-    for i in range(len(scd_obj.data_pre.obs['Fate_cls'])):
-        if scd_obj.data_pre.obs['Fate_cls'][i] == "offTarget":
-            count_offtarget += 1
-            scd_obj.data_pre.obs['Fate_cls'][i] = cell_fate_cls[i]
-            if cell_fate_cls[i] != "Uncertain":
-                count_enhance += 1
-    enhance_rate = count_enhance / count_offtarget
-    print("Ratio of newly added fate clusters: ", enhance_rate)
-
-    # scd_obj.data_pre.obs['Fate_cls'] = cell_fate_cls
-    scd_obj.data_pre.obs[cluster_name] = scd_obj.data_pre.obs[cluster_name].astype('str')
-    scd_obj.data_pre.obs['Fate'] = scd_obj.data_pre.obs[cluster_name] + '->' + scd_obj.data_pre.obs['Fate_cls']
-
-    print(np.unique(scd_obj.data_pre.obs['Fate'], return_counts=True))
-    return scd_obj, enhance_rate
-
-
-def generateDEGs(cur_expr, index, cluster, fate_str):
+def generateDEGs(cur_expr, index, cluster, fate_str, filter_signif = True):
     de_df = pd.DataFrame({'Gene': pd.DataFrame(cur_expr.uns['rank_genes_groups']['names']).iloc[:, index],
-                          'Cluster': cluster,
-                          'Fate': fate_str,  # str(si) + '->' + str(ti) or 'FlowTo' + str(ti)
-                          'scores': pd.DataFrame(cur_expr.uns['rank_genes_groups']['scores']).iloc[:, index],
-                          'logfoldchanges': pd.DataFrame(cur_expr.uns['rank_genes_groups']['logfoldchanges']).iloc[:,
-                                            index],
-                          'pvals': pd.DataFrame(cur_expr.uns['rank_genes_groups']['pvals']).iloc[:, index],
-                          'pvals_adj': pd.DataFrame(cur_expr.uns['rank_genes_groups']['pvals_adj']).iloc[:, index]})
-
-    # de_df = de_df[(de_df['pvals_adj'] < 0.05) & (de_df['logfoldchanges'] > 0) & (de_df['scores'] > 1)]
-    # de_df = de_df[(de_df['pvals_adj'] < 0.05) & ((de_df['logfoldchanges'] > 0.25) | (de_df['logfoldchanges'] < -0.25))]
-    de_df = de_df[(de_df['pvals_adj'] < 0.05)]
+                        'Cluster': cluster,
+                        'Fate': fate_str, # str(si) + '->' + str(ti) or 'FlowTo' + str(ti)
+                        'scores': pd.DataFrame(cur_expr.uns['rank_genes_groups']['scores']).iloc[:, index],
+                        'logfoldchanges': pd.DataFrame(cur_expr.uns['rank_genes_groups']['logfoldchanges']).iloc[:, index],
+                        'pvals': pd.DataFrame(cur_expr.uns['rank_genes_groups']['pvals']).iloc[:, index],
+                        'pvals_adj': pd.DataFrame(cur_expr.uns['rank_genes_groups']['pvals_adj']).iloc[:, index]})
+    if filter_signif:
+        de_df = de_df[(de_df['pvals_adj'] < 0.05) & (de_df['logfoldchanges'] > 0)]
+    else:
+        de_df = de_df[de_df['logfoldchanges'] > 0]
     return de_df
 
 
-def getColorMap(adata, special_case, default_palette=("#43D9FE", "#E78AC3", "#FEC643", "#A6D854",
-                                                      "#FE6943", "#E5C494", "#33AEB1", "#FFEC1A",
-                                                      "#66C2A5", "#FC8D62", "#8DA0CB", "#E78AC3",
-                                                      "#A6D854", "#FFD92F", "#E5C494", "#B3B3B3",
-                                                      "#D5BB67", "#6ACC64", "#D65F5F", "#82C6E2",
-                                                      "#DC7EC0", "#4878D0", '#B5A2E0', '#F9B475',
-                                                      '#50C7CA', '#CF747A', '#63AFF0', '#8792AF', '#E0CB00')):
+def getColorMap(items, special_case=None, default_palette=("#43D9FE", "#E78AC3", "#FEC643", "#A6D854",
+                                                           "#FE6943", "#E5C494", "#33AEB1", "#FFEC1A",
+                                                           "#66C2A5", "#FC8D62", "#8DA0CB", "#E78AC3",
+                                                           "#A6D854", "#FFD92F", "#E5C494", "#B3B3B3",
+                                                           "#D5BB67", "#6ACC64", "#D65F5F", "#82C6E2",
+                                                           "#DC7EC0", "#4878D0", '#B5A2E0', '#F9B475',
+                                                           '#50C7CA', '#CF747A', '#63AFF0', '#8792AF', '#E0CB00')):
     # default_palette = sns.color_palette("muted") + sns.color_palette("Set2")
     custom_palette = {}
-    adata.obs['cluster'] = adata.obs['cluster'].astype('category')
-    adata.obs['Fate'] = adata.obs['Fate'].astype('category')
-    for category in adata.obs['cluster'].cat.categories:
+    items = items.astype('category')
+    for category in items.cat.categories:
         custom_palette[category] = default_palette[len(custom_palette) % len(default_palette)]
-    for category in adata.obs['Fate'].cat.categories:
-        if category in special_case or category == "offTarget":
-            custom_palette[category] = 'lightgray'
-        else:
-            custom_palette[category] = default_palette[len(custom_palette) % len(default_palette)]
+    if special_case is not None:
+        custom_palette[special_case] = 'lightgray'
+
     return custom_palette
 
 
-def plotCellFate(adata, savePath, run_label_time, special_case="offTarget", png_name="_cellfate-umap-onlyLT.png"):
+def plotCellFate(adata, savePath, run_label_time, cls_colname, fate_colname,
+                 special_case="Missing", png_name="_cellfate-umap.png"):
+    cls_colors = getColorMap(adata.obs[cls_colname])
+    fate_colors = getColorMap(adata.obs[fate_colname], special_case)
+    cur_colors = cls_colors | fate_colors
     with plt.rc_context({'figure.figsize': (3, 3)}):
-        sc.pl.umap(adata, color=["cluster", "Fate"], palette=getColorMap(adata, special_case), show=False)
+        sc.pl.umap(adata, color=[cls_colname, fate_colname], palette=cur_colors, show=False)
     plt.savefig(savePath + run_label_time + png_name, dpi=300, bbox_inches='tight')
 
 
-def compute_fate_vector(adata, cell_2lin_cls, n_neighbors=5):
+def compute_fate_vector(adata, cell_2lin_cls, n_neighbors=5, fate_cls_name="Lineage_fate"):
     # cell_2lin_cls = np.array([(cross_lin_mat[:,
     #                            np.where(scd_obj.data_pos.obs['cluster'] == str(j))[0]] > 0).sum(axis=1).tolist()
     #                           for j in range(scd_obj.n_clus[1])]).T
@@ -727,10 +646,10 @@ def compute_fate_vector(adata, cell_2lin_cls, n_neighbors=5):
             cfrs_values.append(entropy)
 
     # adata = scd_obj.data_pre
-    cell_2lin_cls = cell_2lin_cls[adata.obs['Fate_cls'] != 'offTarget', :]
-    adata = adata[adata.obs['Fate_cls'] != 'offTarget']
-    cell_2lin_cls = cell_2lin_cls[adata.obs['Fate_cls'] != 'Uncertain', :]
-    adata = adata[adata.obs['Fate_cls'] != 'Uncertain']
+    cell_2lin_cls = cell_2lin_cls[adata.obs[fate_cls_name] != 'Missing', :]
+    adata = adata[adata.obs[fate_cls_name] != 'Missing']
+    cell_2lin_cls = cell_2lin_cls[adata.obs[fate_cls_name] != 'Uncertain', :]
+    adata = adata[adata.obs[fate_cls_name] != 'Uncertain']
     data_points = adata.obsm["X_umap"]
     n_samples = len(data_points)
     nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(data_points)
@@ -747,7 +666,7 @@ def compute_fate_vector(adata, cell_2lin_cls, n_neighbors=5):
         afs_values.append(average_fate_similarity)
 
     cfrs, afs = np.mean(cfrs_values), np.mean(afs_values)
-    print(cfrs, afs)
+    print("Cell fate randomness: {:.4f}".format(cfrs), "Neighboring cell fate similarity: {:.4f}".format(afs))
     return cfrs, afs
 
 
@@ -788,53 +707,25 @@ def compute_jics(n_samples, indices, labels):
     return np.mean(jics_values)
 
 
-def calculateFateDiversity(adata, n_neighbors=5):
-    '''
-    ncs_list, jics_list, ecs_list = [], [], []
-    for si in range(len(np.unique(adata.obs['cluster']))):
-        # print(si)
-        cur_expr = adata[adata.obs['cluster'] == str(si)]
-        cur_expr = cur_expr[cur_expr.obs['Fate_cls'] != 'offTarget']
-        cur_expr = cur_expr[cur_expr.obs['Fate_cls'] != 'Uncertain']
-        if cur_expr.n_obs >= 10:
-            # UMAP coordinates
-            data_points = cur_expr.obsm["X_umap"]
-            # Fate cluster
-            labels = cur_expr.obs['Fate_cls']
-
-            ncs = compute_ncs(data_points, labels)
-            jics = compute_jics(data_points, labels)
-            ecs = compute_ecs(data_points, labels)
-
-            ncs_list.append(ncs)
-            jics_list.append(jics)
-            ecs_list.append(ecs)
-
-            # print(f"NCS: {ncs}")
-            # print(f"JICS: {jics}")
-            # print(f"ECS: {ecs}")
-
-    summary_metric = (np.mean(ncs_list) + np.mean(jics_list) - np.mean(ecs_list)) / 3
-    return summary_metric, ncs_list, jics_list, ecs_list
-    '''
-
-    adata = adata[adata.obs['Fate_cls'] != 'offTarget']
-    adata = adata[adata.obs['Fate_cls'] != 'Uncertain']
+def calculateFateDiversity(adata, n_neighbors=5, fate_cls_name="Lineage_fate"):
+    adata = adata[adata.obs[fate_cls_name] != 'Missing']
+    adata = adata[adata.obs[fate_cls_name] != 'Uncertain']
     data_points = adata.obsm["X_umap"]
     # Fate cluster
-    labels = adata.obs['Fate_cls']
+    labels = adata.obs[fate_cls_name]
 
     n_samples = len(data_points)
     nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(data_points)
     _, indices = nbrs.kneighbors(data_points)
 
     ncs = compute_ncs(n_samples, indices, labels)
-    jics = compute_jics(n_samples, indices, labels)
+    # jics = compute_jics(n_samples, indices, labels)
     ecs = compute_ecs(n_samples, indices, labels)
 
-    summary_metric = (ncs + jics - ecs) / 3
-    print(summary_metric, ncs, jics, ecs)
-    return summary_metric, ncs, jics, ecs
+    # summary_metric = (ncs + jics - ecs) / 3
+    # print(summary_metric, ncs, jics, ecs)
+    print("Neighboring cell fate consistency: {:.4f}".format(ncs), "Neighboring cell fate randomness: {:.4f}".format(ecs))
+    return ncs, ecs
 
 
 class CustomUnpickler(pickle.Unpickler):

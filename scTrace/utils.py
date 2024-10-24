@@ -510,10 +510,11 @@ def plotCellFate(adata, savePath, run_label_time, cls_colname, fate_colname,
                  special_case="Missing", png_name="_cellfate-umap.png"):
     cls_colors = getColorMap(adata.obs[cls_colname])
     fate_colors = getColorMap(adata.obs[fate_colname], special_case)
-    cur_colors = cls_colors | fate_colors
+    cur_colors = cls_colors.update(fate_colors) # cur_colors = cls_colors | fate_colors in Python3.9+
     with plt.rc_context({'figure.figsize': (3, 3)}):
         sc.pl.umap(adata, color=[cls_colname, fate_colname], palette=cur_colors, show=False)
     plt.savefig(savePath + run_label_time + png_name, dpi=300, bbox_inches='tight')
+    plt.close()
 
 
 def compute_fate_vector(adata, cell_2lin_cls, n_neighbors=5, fate_cls_name="Lineage_fate"):

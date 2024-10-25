@@ -28,6 +28,8 @@ git clone https://github.com/czythu/scTrace.git
 
 Refer to folder: [tutorial](https://github.com/czythu/scTrace/tree/main/tutorial) for full pipeline.
 
+Example data: [Larry-Invitro-differentiation](https://cloud.tsinghua.edu.cn/f/045017a16a804ea982c2/?dl=1)
+
 Below are the introduction to important functions, consisting of the main steps in `scTrace+`.
 
 1. `prepareCrosstimeGraph`: Process input time-series dataset, output lineage adjacency matrices
@@ -47,4 +49,7 @@ and transcriptome similarity matrices, both within and across timepoints.
 
 8. `enhanceFate`: Enhance cell fate information based on hypothesis testing method for single-cell level fate inference.
 
-9. `runFateDE`: Perform differential expression analysis between dynamic sub-clusters.
+9. `runFateDE`: Perform differential expression analysis between selected dynamic sub-clusters.
+
+10. `dynamicDiffAnalysis`: Perform differential expression analysis between all dynamic sub-clusters (1 v.s. rest).
+

@@ -1,6 +1,10 @@
 # Copyright (C) 2024 Zeyu Chen, G-Lab, Tsinghua University
 
 from setuptools import setup, find_packages
+import os
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+print(os.getcwd())
 
 with open("README.md", "r") as fh: 
 	description = fh.read() 
@@ -8,11 +12,11 @@ with open("README.md", "r") as fh:
 
 setup( 
 	name="scTrace", 
-	version="0.1.1",
+	version="0.1.6",
 	author="Zeyu Chen", 
 	author_email="chenzy22@mails.tsinghua.edu.cn", 
     packages=find_packages(),
-	description="A package to enhance single-cell lineage tracing data through kernelized bayesian network", 
+	description="scTrace+: enhance the cell fate inference by integrating the lineage-tracing and multi-faceted transcriptomic similarity information", 
 	long_description=description, 
 	long_description_content_type="text/markdown", 
 	url="https://github.com/czythu/scTrace", 

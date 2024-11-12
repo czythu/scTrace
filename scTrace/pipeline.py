@@ -1,4 +1,5 @@
 import gc
+import warnings
 from .scLTMF import scLTMF
 from .utils import *
 import scStateDynamics as scd
@@ -275,26 +276,28 @@ def enhanceFate(scd_obj, complete_mat, savePath, run_label_time,
 
 
 def runFateDE(adata_pre, fate_colname, sel_cls, sel_fates, saveName, filter_signif=True):
-    all_de_df = pd.DataFrame()
-    cur_expr = adata_pre[adata_pre.obs[fate_colname].isin(sel_fates)]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        all_de_df = pd.DataFrame()
+        cur_expr = adata_pre[adata_pre.obs[fate_colname].isin(sel_fates)]
 
-    t_v, t_n = np.unique(cur_expr.obs[fate_colname], return_counts=True)
+        t_v, t_n = np.unique(cur_expr.obs[fate_colname], return_counts=True)
 
-    if np.all(t_n > 1) == False:
-        mask = np.isin(np.array(cur_expr.obs[sel_fates]), t_v[np.argwhere(t_n > 1).flatten()])
-        cur_expr = cur_expr[np.where(mask)[0]]
-        t_v, t_n = np.unique(cur_expr.obs[sel_fates], return_counts=True)
+        if np.all(t_n > 1) == False:
+            mask = np.isin(np.array(cur_expr.obs[sel_fates]), t_v[np.argwhere(t_n > 1).flatten()])
+            cur_expr = cur_expr[np.where(mask)[0]]
+            t_v, t_n = np.unique(cur_expr.obs[sel_fates], return_counts=True)
 
-    try:
-        # cur_expr.uns['log1p']["base"] = None
-        sc.tl.rank_genes_groups(cur_expr, groupby=fate_colname, method='wilcoxon')
-        subfates = [name for name, _ in cur_expr.uns['rank_genes_groups']['names'].dtype.fields.items()]
-        for i in range(len(subfates)):
-            de_df = generateDEGs(cur_expr, index=i, cluster=sel_cls, fate_str=subfates[i], filter_signif=filter_signif)
-            all_de_df = pd.concat([all_de_df, de_df], axis=0)
+        try:
+            # cur_expr.uns['log1p']["base"] = None
+            sc.tl.rank_genes_groups(cur_expr, groupby=fate_colname, method='wilcoxon')
+            subfates = [name for name, _ in cur_expr.uns['rank_genes_groups']['names'].dtype.fields.items()]
+            for i in range(len(subfates)):
+                de_df = generateDEGs(cur_expr, index=i, cluster=sel_cls, fate_str=subfates[i], filter_signif=filter_signif)
+                all_de_df = pd.concat([all_de_df, de_df], axis=0)
 
-    except ZeroDivisionError as e:
-        print(e)
+        except ZeroDivisionError as e:
+            print(e)
 
     if all_de_df.shape[0] > 0:
         all_de_df.to_csv(saveName, sep='\t', header=True, index=False)
@@ -304,27 +307,29 @@ def runFateDE(adata_pre, fate_colname, sel_cls, sel_fates, saveName, filter_sign
 
 def dynamicDiffAnalysis(scd_obj, savePath, run_label_time,
                         sel_cluster_name="cluster", fate_colname='Lineage_fate', special_case="Missing"):
-    all_de_df = pd.DataFrame()
-    pre_celltypes = np.unique(scd_obj.data_pre.obs[sel_cluster_name])
-    for si in pre_celltypes:
-        cur_expr = scd_obj.data_pre[scd_obj.data_pre.obs[sel_cluster_name] == str(si)]
-        cur_expr = cur_expr[cur_expr.obs[fate_colname] != special_case]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        all_de_df = pd.DataFrame()
+        pre_celltypes = np.unique(scd_obj.data_pre.obs[sel_cluster_name])
+        for si in pre_celltypes:
+            cur_expr = scd_obj.data_pre[scd_obj.data_pre.obs[sel_cluster_name] == str(si)]
+            cur_expr = cur_expr[cur_expr.obs[fate_colname] != special_case]
 
-        t_v, t_n = np.unique(cur_expr.obs[fate_colname], return_counts=True)
-        if np.all(t_n > 1) == False:
-            mask = np.isin(np.array(cur_expr.obs[fate_colname]), t_v[np.argwhere(t_n > 1).flatten()])
-            cur_expr = cur_expr[np.where(mask)[0]]
             t_v, t_n = np.unique(cur_expr.obs[fate_colname], return_counts=True)
-        try:
-            sc.tl.rank_genes_groups(cur_expr, groupby=fate_colname, method='wilcoxon')
-            # Select genes
-            for i, f in enumerate(cur_expr.obs[fate_colname].unique()):
-                fate_str = str(si) + '->' + str(f)
-                de_df = generateDEGs(cur_expr, index=i, cluster=si, fate_str=fate_str)
-                all_de_df = pd.concat([all_de_df, de_df], axis=0)
+            if np.all(t_n > 1) == False:
+                mask = np.isin(np.array(cur_expr.obs[fate_colname]), t_v[np.argwhere(t_n > 1).flatten()])
+                cur_expr = cur_expr[np.where(mask)[0]]
+                t_v, t_n = np.unique(cur_expr.obs[fate_colname], return_counts=True)
+            try:
+                sc.tl.rank_genes_groups(cur_expr, groupby=fate_colname, method='wilcoxon')
+                # Select genes
+                for i, f in enumerate(cur_expr.obs[fate_colname].unique()):
+                    fate_str = str(si) + '->' + str(f)
+                    de_df = generateDEGs(cur_expr, index=i, cluster=si, fate_str=fate_str)
+                    all_de_df = pd.concat([all_de_df, de_df], axis=0)
 
-        except ZeroDivisionError as e:
-            print(e)
+            except ZeroDivisionError as e:
+                print(e)
 
     if all_de_df.shape[0] > 0:
         if fate_colname == "Lineage_fate":

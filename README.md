@@ -3,7 +3,9 @@
 [![PyPI version](https://badge.fury.io/py/scTrace.svg)](https://pypi.org/project/scTrace/)
 
 ## Introduction
-`scTrace+` is a computational method to enhance single-cell lineage tracing data through the kernelized bayesian network.
+`scTrace+` is a computational method to enhance the cell fate inference by integrating the lineage-tracing and multi-faceted transcriptomic similarity information.
+
+## <img src="https://github.com/czythu/scTrace/tree/main/tutorial/scTrace.png" width="70%" alt="scTrace+ workflow" align=center>
 
 ## System Requirements
 - Python version: >= 3.7

@@ -5,7 +5,9 @@
 ## Introduction
 `scTrace+` is a computational method to enhance the cell fate inference by integrating the lineage-tracing and multi-faceted transcriptomic similarity information.
 
-## <img src="https://github.com/czythu/scTrace/tree/main/tutorial/scTrace.png" width="70%" alt="scTrace+ workflow" align=center>
+<div align=center>
+<img alt="scTrace+ workflow" src="tutorial/scTrace.png" width="70%"/>
+</div>
 
 ## System Requirements
 - Python version: >= 3.7

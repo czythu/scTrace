@@ -121,30 +121,20 @@ def plotSimilarityCompare(cross_sim, cross_lin_mat, title, savePath):
     within_clone = within_clone[within_clone <= 0.99]
     other_value = other_value[other_value <= 0.99]
     print(np.max(within_clone), np.max(other_value))
-    plt.hist(within_clone, color='#A8CFE8', fill='#A8CFE8', density=True, log=True,
-             bins=20, alpha=0.6, label='Within-clone')
     plt.hist(other_value, color='#F9DF91', fill='#F9DF91', density=True, log=True,
              bins=20, alpha=0.6, label='Cross-clone')
-    # stat, p_value = ranksums(within_clone, other_value, alternative='greater')
-    # print(f"p-value: {format(p_value, '.4e')}")
-    # print('%.4e' % p_value)
-    # plt.text(1.5, 1.5, f"p-value: {format(p_value, '.4e')}", ha='left', bbox=dict(facecolor='white', edgecolor='black'))
-    plt.ylabel('Number (log-scale)')
-    plt.xlabel('Pearson correlation coefficients')
-    plt.title(title)
+    plt.hist(within_clone, color='#A8CFE8', fill='#A8CFE8', density=True, log=True,
+             bins=20, alpha=0.6, label='Within-clone')
+
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.ylabel('Density (log-scale)', fontsize=12)
+    plt.xlabel('Transcriptomic similarity', fontsize=12)
+    plt.title(title, fontsize=14)
     # plt.legend()
 
     plt.tight_layout()
     plt.savefig(savePath)
-    plt.close()
-
-
-def create_laplacian_matrix(adj_matrix):
-    # Graph kernel matrix construction
-    # L = pseudo-inv of graph kernel matrix
-    # :param adj_matrix:
-    L = np.diag(np.sum(adj_matrix, axis=1)) - adj_matrix
-    return L
 
 
 def inv_node2vec_kernel(adj_matrix):
@@ -225,9 +215,9 @@ def plot_metrics(model, savePath, run_label_time, showName):
     axs[0].plot(epochs, val_rmse, label='Validation', color='blue', marker='.')
     axs[0].plot(epochs, train_rmse, label='Training', color='orange', marker='.')
     # axs[0].set_title('RMSE: '+ run_label_time)
-    axs[0].set_xlabel('Epoch', fontsize=16)
-    axs[0].set_ylabel('RMSE', fontsize=16)
-    axs[0].legend(loc='upper right', fontsize=16)
+    axs[0].set_xlabel('Epoch', fontsize=18)
+    axs[0].set_ylabel('RMSE', fontsize=18)
+    axs[0].legend(loc='upper right', fontsize=18)
     axs[0].grid(False)
 
     #     axs[0].text(max(epochs) / 2, max(train_rmse) / 2, f"Min RMSE: {format(val_rmse[idx1], '.3f')}", ha='left',
@@ -237,15 +227,15 @@ def plot_metrics(model, savePath, run_label_time, showName):
     axs[1].plot(epochs, val_recall, label='Validation', color='blue', marker='.')
     axs[1].plot(epochs, train_recall, label='Training', color='orange', marker='.')
     # axs[1].set_title('Recall: ' + run_label_time)
-    axs[1].set_xlabel('Epoch', fontsize=16)
-    axs[1].set_ylabel('Recall', fontsize=16)
-    axs[1].legend(loc='lower right', fontsize=16)
+    axs[1].set_xlabel('Epoch', fontsize=18)
+    axs[1].set_ylabel('Recall', fontsize=18)
+    axs[1].legend(loc='lower right', fontsize=18)
     axs[1].grid(False)
 
     #     axs[1].text(max(epochs) / 2, max(train_recall) / 2, f"Max Recall: {format(val_recall[idx2], '.3f')}", ha='left',
     #                 bbox=dict(facecolor='white', edgecolor='black'))
 
-    plt.suptitle("Training process of " + showName, fontsize=18)
+    plt.suptitle("Training process of " + showName, fontsize=20)
     plt.tight_layout()
     # plt.show()
     plt.savefig(savePath + run_label_time + '_metrics.png', dpi=300, bbox_inches='tight')
@@ -253,8 +243,7 @@ def plot_metrics(model, savePath, run_label_time, showName):
     return val_rmse[idx1], val_recall[idx2]
 
 
-def plotFittingResults(pred_mat, y_pred, y_true, y_pred_val, y_true_val, pre_name, pos_name, savePath, run_label_time,
-                       showName):
+def plotFittingResults(y_pred, y_true, y_pred_val, y_true_val, savePath, run_label_time, showName):
     # Need to add correlation coefficient in these figures
 
     plt.figure(figsize=(3, 3), dpi=300)
@@ -263,7 +252,7 @@ def plotFittingResults(pred_mat, y_pred, y_true, y_pred_val, y_true_val, pre_nam
     plt.plot([min(min(y_pred), min(y_true)), max(max(y_pred), max(y_true))],
              [min(min(y_pred), min(y_true)), max(max(y_pred), max(y_true))],
              linestyle='--', color='gray', linewidth=0.7)
-    plt.text(0.95, 0.05, f'Correlation: {corr:.3f}',
+    plt.text(0.95, 0.05, f'Correlation (Train): {corr:.3f}',
              fontsize=10, transform=plt.gca().transAxes,
              horizontalalignment='right',
              verticalalignment='bottom')
@@ -279,7 +268,7 @@ def plotFittingResults(pred_mat, y_pred, y_true, y_pred_val, y_true_val, pre_nam
     plt.plot([min(min(y_pred_val), min(y_true_val)), max(max(y_pred_val), max(y_true_val))],
              [min(min(y_pred_val), min(y_true_val)), max(max(y_pred_val), max(y_true_val))],
              linestyle='--', color='gray', linewidth=0.7)
-    plt.text(0.95, 0.05, f'Correlation: {corr_val:.3f}',
+    plt.text(0.95, 0.05, f'Correlation (Val): {corr_val:.3f}',
              fontsize=10, transform=plt.gca().transAxes,
              horizontalalignment='right',
              verticalalignment='bottom')
@@ -288,30 +277,6 @@ def plotFittingResults(pred_mat, y_pred, y_true, y_pred_val, y_true_val, pre_nam
     plt.ylabel('Raw matrix values')
     plt.tight_layout()
     plt.savefig(savePath + run_label_time + '-RawMatrixValues_compare_val.png')
-
-    plt.figure(figsize=(2.8, 2.35), dpi=300)
-    plt.hist(pred_mat.reshape(1, -1)[0], bins=20, color='#E1F3FB', edgecolor='#A8CFE8', linewidth=0.6, log=False)
-    plt.ylabel('Number')
-    plt.xlabel('All predicted values')
-    plt.title(pre_name + ' -> ' + pos_name)
-    plt.tight_layout()
-    plt.savefig(savePath + run_label_time + '-AllPredValues-hist.png')
-
-    plt.figure(figsize=(2.8, 2.35), dpi=300)
-    plt.hist(y_pred, bins=20, color='#E1F3FB', edgecolor='#A8CFE8', linewidth=0.6, log=False)
-    plt.ylabel('Number')
-    plt.xlabel('All predicted values')
-    plt.title(pre_name + ' -> ' + pos_name)
-    plt.tight_layout()
-    plt.savefig(savePath + run_label_time + '-NonMissingMatValues-pred-hist.png')
-
-    plt.figure(figsize=(2.8, 2.35), dpi=300)
-    plt.hist(y_true, bins=20, color='#E1F3FB', edgecolor='#A8CFE8', linewidth=0.6, log=False)
-    plt.ylabel('Number')
-    plt.xlabel('Raw matrix values')
-    plt.title(pre_name + ' -> ' + pos_name)
-    plt.tight_layout()
-    plt.savefig(savePath + run_label_time + '-NonMissingMatValues-truth-hist.png')
 
     return corr
 
@@ -517,111 +482,13 @@ def plotCellFate(adata, savePath, run_label_time, cls_colname, fate_colname,
     plt.close()
 
 
-def compute_fate_vector(adata, cell_2lin_cls, n_neighbors=5, fate_cls_name="Lineage_fate"):
-    # cell_2lin_cls = np.array([(cross_lin_mat[:,
-    #                            np.where(scd_obj.data_pos.obs['cluster'] == str(j))[0]] > 0).sum(axis=1).tolist()
-    #                           for j in range(scd_obj.n_clus[1])]).T
-    cfrs_values = []
-    n_samples, n_clusters = cell_2lin_cls.shape
-    for i in range(n_samples):
-        vector = cell_2lin_cls[i, :]
-        if np.sum(vector) > 0:
-            # label_counts = Counter(vector)
-            # num = np.sum(vector)
-            # entropy = -sum((count / num) * math.log(count / num + 1e-9) for count in label_counts.values())
-            count_all = np.sum(vector)
-            entropy = -sum((count / count_all) * math.log(count / count_all + 1e-9) for count in vector)
-            cfrs_values.append(entropy)
-
-    # adata = scd_obj.data_pre
-    cell_2lin_cls = cell_2lin_cls[adata.obs[fate_cls_name] != 'Missing', :]
-    adata = adata[adata.obs[fate_cls_name] != 'Missing']
-    cell_2lin_cls = cell_2lin_cls[adata.obs[fate_cls_name] != 'Uncertain', :]
-    adata = adata[adata.obs[fate_cls_name] != 'Uncertain']
-    data_points = adata.obsm["X_umap"]
-    n_samples = len(data_points)
-    nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(data_points)
-    _, indices = nbrs.kneighbors(data_points)
-
-    afs_values = []
-    np.random.seed(123)
-    noise = np.random.normal(0, 1e-10, cell_2lin_cls.shape)
-    cell_2lin_cls = cell_2lin_cls + noise
-
-    for i in range(n_samples):
-        coor_mat = np.corrcoef(cell_2lin_cls[indices[i], :])
-        average_fate_similarity = np.mean(coor_mat[0, 1:])
-        afs_values.append(average_fate_similarity)
-
-    cfrs, afs = np.mean(cfrs_values), np.mean(afs_values)
-    print("Cell fate randomness: {:.4f}".format(cfrs), "Neighboring cell fate similarity: {:.4f}".format(afs))
-    return cfrs, afs
-
-
-def compute_ncs(n_samples, indices, labels):
-    ncs_values = []
-
-    for i in range(n_samples):
-        neighbors = indices[i][1:]
-        same_label_count = sum(1 for j in neighbors if labels[j] == labels[i])
-        ncs_values.append(same_label_count / len(neighbors))
-
-    return np.mean(ncs_values)
-
-
-def compute_ecs(n_samples, indices, labels):
-    ecs_values = []
-
-    for i in range(n_samples):
-        neighbors = indices[i][1:]
-        label_counts = Counter(labels[j] for j in neighbors)
-        entropy = -sum((count / len(neighbors)) * math.log(count / len(neighbors) + 1e-9)
-                       for count in label_counts.values())
-        ecs_values.append(entropy)
-
-    return np.mean(ecs_values)
-
-
-def compute_jics(n_samples, indices, labels):
-    jics_values = []
-
-    for i in range(n_samples):
-        neighbors = indices[i][1:]
-        intersection = sum(1 for j in neighbors if labels[j] == labels[i]) + 1  # add itself
-        union = len(neighbors) + 1
-        jaccard_index = intersection / union
-        jics_values.append(jaccard_index)
-
-    return np.mean(jics_values)
-
-
-def calculateFateDiversity(adata, n_neighbors=5, fate_cls_name="Lineage_fate"):
-    adata = adata[adata.obs[fate_cls_name] != 'Missing']
-    adata = adata[adata.obs[fate_cls_name] != 'Uncertain']
-    data_points = adata.obsm["X_umap"]
-    # Fate cluster
-    labels = adata.obs[fate_cls_name]
-
-    n_samples = len(data_points)
-    nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(data_points)
-    _, indices = nbrs.kneighbors(data_points)
-
-    ncs = compute_ncs(n_samples, indices, labels)
-    # jics = compute_jics(n_samples, indices, labels)
-    ecs = compute_ecs(n_samples, indices, labels)
-
-    # summary_metric = (ncs + jics - ecs) / 3
-    # print(summary_metric, ncs, jics, ecs)
-    print("Neighboring cell fate consistency: {:.4f}".format(ncs), "Neighboring cell fate randomness: {:.4f}".format(ecs))
-    return ncs, ecs
-
-
 class CustomUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
         # Suppose we need to remap 'old_module_name' to 'new_module_name'
         if module == 'scLTMF':
             module = 'scTrace.scLTMF'
         return super().find_class(module, name)
+
 
 def load_model(filename):
     with open(filename, 'rb') as f:

@@ -31,7 +31,6 @@ def prepareWithintimeGraph(data_pre, data_pos, lineage_identity, pre_name, pos_n
     else:
         data, title = data_pos, pos_name
     sim_mat = getSimilarityMatrix(data, data, method = 'Pearson')
-    # lineage_identity = 'Clone' in LARRY
     barcodes = list(data.obs[lineage_identity])
     within_lin_mat, _ = getLineageMatrix(bars = barcodes, bars2 = barcodes)
     print("Generating mother-daughter similarity (with-in timepoint)")
@@ -102,11 +101,12 @@ def predictMissingEntries(pre_name, pos_name, savePath, run_label_time, showName
     pred_mat = np.dot(model.p, model.q.T)
     y_pred = np.array([pred_mat[int(model.train[i, 0]), int(model.train[i, 1])] for i in range(model.train.shape[0])])
     y_pred_val = np.array([pred_mat[int(model.val[i, 0]), int(model.val[i, 1])] for i in range(model.val.shape[0])])
-    threshold = threshold_positive
+    # threshold = threshold_positive
+    threshold = min(np.max(model.train[:, 2]) / 2, np.mean(model.train[:, 2]) - 2 * np.std(model.train[:, 2]))
     complet_mat = np.dot(model.p, model.q.T)
     complet_mat[complet_mat < threshold] = 0
-    corr = plotFittingResults(pred_mat, y_pred, y_true, y_pred_val, y_true_val,
-                              pre_name, pos_name, savePath, run_label_time, showName + ': ' + pre_name + '->' + pos_name)
+    corr = plotFittingResults(y_pred, y_true, y_pred_val, y_true_val,
+                              savePath, run_label_time, showName + ': ' + pre_name + '->' + pos_name)
     return pred_mat, y_true, y_pred, complet_mat, corr, min_rmse, max_recall
 
 
@@ -183,14 +183,9 @@ def assignLineageInfo(scd_obj, cross_lin_mat, savePath, run_label_time, sel_clus
     fate_cls = scd_obj.data_pre.obs[sel_cluster_name].astype(str) + ' -> ' + fate_cls
     fate_cls[np.sum(cell_2lin_cls, axis=1) == 0] = 'Missing'
     scd_obj.data_pre.obs['Lineage_fate_label'] = fate_cls
-    # print(scd_obj.data_pre.obs['Lineage_fate'].value_counts())
-    # print(scd_obj.data_pre.obs['Lineage_fate_label'].value_counts())
-
-    cfrs, afs = compute_fate_vector(scd_obj.data_pre, cell_2lin_cls, fate_cls_name="Lineage_fate")
-    ncs, ecs = calculateFateDiversity(scd_obj.data_pre, fate_cls_name="Lineage_fate")
     plotCellFate(scd_obj.data_pre, savePath, run_label_time, cls_colname=sel_cluster_name, fate_colname='Lineage_fate_label',
                  special_case="Missing", png_name="_cellfate-umap-onlyLT.png")
-    return scd_obj, [ncs, ecs, cfrs, afs]
+    return scd_obj
 
 
 def enhanceFate(scd_obj, complete_mat, savePath, run_label_time,
@@ -289,7 +284,6 @@ def runFateDE(adata_pre, fate_colname, sel_cls, sel_fates, saveName, filter_sign
         mask = np.isin(np.array(cur_expr.obs[sel_fates]), t_v[np.argwhere(t_n > 1).flatten()])
         cur_expr = cur_expr[np.where(mask)[0]]
         t_v, t_n = np.unique(cur_expr.obs[sel_fates], return_counts=True)
-        # print(t_v, t_n)
 
     try:
         # cur_expr.uns['log1p']["base"] = None

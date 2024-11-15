@@ -13,6 +13,7 @@ from scipy.stats import ranksums, mannwhitneyu
 from tqdm import trange
 from collections import Counter
 import pickle
+import gc
 
 
 def preProcess(scobj, n_hvgs=2000, log_normalize=True):
@@ -113,8 +114,7 @@ def getCrossLineageDensity(cross_lin_mat):
 
 
 def plotSimilarityCompare(cross_sim, cross_lin_mat, title, savePath):
-    plt.figure(figsize=(3.5, 2.5), dpi=300)
-    # plt.figure(figsize=(5, 4), dpi=300)
+    plt.figure(figsize=(3.5, 2.5))
 
     within_clone = np.array(coo_matrix(np.multiply(cross_sim, cross_lin_mat)).data)
     other_value = np.array(coo_matrix(np.multiply(cross_sim, 1 - cross_lin_mat)).data)
@@ -135,6 +135,9 @@ def plotSimilarityCompare(cross_sim, cross_lin_mat, title, savePath):
 
     plt.tight_layout()
     plt.savefig(savePath)
+
+    del(within_clone, other_value)
+    gc.collect()
 
 
 def inv_node2vec_kernel(adj_matrix):
@@ -246,7 +249,7 @@ def plot_metrics(model, savePath, run_label_time, showName):
 def plotFittingResults(y_pred, y_true, y_pred_val, y_true_val, savePath, run_label_time, showName):
     # Need to add correlation coefficient in these figures
 
-    plt.figure(figsize=(3, 3), dpi=300)
+    plt.figure(figsize=(3, 3))
     plt.scatter(y_pred, y_true, alpha=0.1, s=5, color='#884b91')
     corr = np.corrcoef(y_pred, y_true)[0, 1]
     plt.plot([min(min(y_pred), min(y_true)), max(max(y_pred), max(y_true))],
@@ -262,7 +265,7 @@ def plotFittingResults(y_pred, y_true, y_pred_val, y_true_val, savePath, run_lab
     plt.tight_layout()
     plt.savefig(savePath + run_label_time + '-RawMatrixValues_compare.png')
 
-    plt.figure(figsize=(3, 3), dpi=300)
+    plt.figure(figsize=(3, 3))
     plt.scatter(y_pred_val, y_true_val, alpha=0.1, s=5, color='#884b91')
     corr_val = np.corrcoef(y_pred_val, y_true_val)[0, 1]
     plt.plot([min(min(y_pred_val), min(y_true_val)), max(max(y_pred_val), max(y_true_val))],

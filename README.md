@@ -57,3 +57,5 @@ and transcriptome similarity matrices, both within and across timepoints.
 
 10. `dynamicDiffAnalysis`: Perform differential expression analysis between all dynamic sub-clusters (1 v.s. rest).
 
+## Citation
+scTrace+: enhance the cell fate inference by integrating the lineage-tracing and multi-faceted transcriptomic similarity information, Wenbo Guo, Zeyu Chen, Xinqi Li, Jingmin Huang, Qifan Hu, Jin Gu, https://doi.org/10.1101/2024.11.12.623316

@@ -212,15 +212,15 @@ def plot_metrics(model, savePath, run_label_time, showName):
     val_rmse, train_rmse = model.list_val_rmse, model.list_train_rmse
     idx1, idx2 = np.argmin(val_rmse), np.argmax(val_recall)
     epochs = list(range(len(val_recall)))
-    fig, axs = plt.subplots(1, 2, figsize=(9, 5))
+    fig, axs = plt.subplots(1, 2, figsize=(6, 3))
 
     # RMSE-Epoch
     axs[0].plot(epochs, val_rmse, label='Validation', color='blue', marker='.')
     axs[0].plot(epochs, train_rmse, label='Training', color='orange', marker='.')
     # axs[0].set_title('RMSE: '+ run_label_time)
-    axs[0].set_xlabel('Epoch', fontsize=18)
-    axs[0].set_ylabel('RMSE', fontsize=18)
-    axs[0].legend(loc='upper right', fontsize=18)
+    axs[0].set_xlabel('Epoch', fontsize=13)
+    axs[0].set_ylabel('RMSE', fontsize=13)
+    axs[0].legend(loc='upper right', fontsize=13)
     axs[0].grid(False)
 
     #     axs[0].text(max(epochs) / 2, max(train_rmse) / 2, f"Min RMSE: {format(val_rmse[idx1], '.3f')}", ha='left',
@@ -230,15 +230,15 @@ def plot_metrics(model, savePath, run_label_time, showName):
     axs[1].plot(epochs, val_recall, label='Validation', color='blue', marker='.')
     axs[1].plot(epochs, train_recall, label='Training', color='orange', marker='.')
     # axs[1].set_title('Recall: ' + run_label_time)
-    axs[1].set_xlabel('Epoch', fontsize=18)
-    axs[1].set_ylabel('Recall', fontsize=18)
-    axs[1].legend(loc='lower right', fontsize=18)
+    axs[1].set_xlabel('Epoch', fontsize=13)
+    axs[1].set_ylabel('Recall', fontsize=13)
+    axs[1].legend(loc='lower right', fontsize=13)
     axs[1].grid(False)
 
     #     axs[1].text(max(epochs) / 2, max(train_recall) / 2, f"Max Recall: {format(val_recall[idx2], '.3f')}", ha='left',
     #                 bbox=dict(facecolor='white', edgecolor='black'))
 
-    plt.suptitle("Training process of " + showName, fontsize=20)
+    plt.suptitle("Training process of " + showName, fontsize=15)
     plt.tight_layout()
     # plt.show()
     plt.savefig(savePath + run_label_time + '_metrics.png', dpi=300, bbox_inches='tight')

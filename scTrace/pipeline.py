@@ -268,7 +268,7 @@ def enhanceFate(scd_obj, complete_mat, savePath, run_label_time,
     adata_pre.obs[enhanced_fate_colname+'_label'] = adata_pre.obs[cluster_name] + ' -> ' + adata_pre.obs[enhanced_fate_colname]
     adata_pre.obs.loc[adata_pre.obs[enhanced_fate_colname+'_label'].str.contains('Uncertain', case=False), enhanced_fate_colname+'_label'] = 'Uncertain'
 
-    plotCellFate(adata_pre, savePath, run_label_time, cls_colname='Cell type annotation',
+    plotCellFate(adata_pre, savePath, run_label_time, cls_colname=cluster_name,
                  fate_colname='Enhanced_fate_label',
                  special_case="Uncertain", png_name="_cellfate-umap-enhanced.png")
 

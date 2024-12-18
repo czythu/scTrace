@@ -1,6 +1,6 @@
 # scTrace+
 
-[![PyPI version](https://badge.fury.io/py/scTrace.svg)](https://pypi.org/project/scTrace/)
+[![PyPI version](https://badge.fury.io/py/scTrace.svg?icon=si%3Apython)](https://pypi.org/project/scTrace/)
 
 ## Introduction
 `scTrace+` is a computational method to enhance the cell fate inference by integrating the lineage-tracing and multi-faceted transcriptomic similarity information.

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import math
-from sklearn.metrics import pairwise
+from sklearn.metrics import pairwise, roc_auc_score, roc_curve, auc
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import coo_matrix
 import matplotlib.pyplot as plt
@@ -14,6 +14,7 @@ from tqdm import trange
 from collections import Counter
 import pickle
 import gc
+from scipy import stats
 
 
 def preProcess(scobj, n_hvgs=2000, log_normalize=True):
@@ -207,6 +208,60 @@ def grid_search(model, train_df, val_df, n_pre_cell, n_post_cell, n_factor, n_ep
     return result, m
 
 
+def calculateAUROC(model, my_T, lin_T):
+    points_train = [(int(model.train[i, 0]), int(model.train[i, 1])) for i in range(model.train.shape[0])]
+    idx_remove = [i * lin_T.shape[1] + j for (i, j) in points_train]
+    points_val = [(int(model.val[i, 0]), int(model.val[i, 1])) for i in range(model.val.shape[0])]
+    idx_keep = [i * lin_T.shape[1] + j for (i, j) in points_val]
+
+    flattened_mat, lin_flattened_mat = my_T.flatten(), lin_T.flatten()
+
+    # Validation set
+    subset_flattened_mat = flattened_mat[idx_keep]
+    subset_lin_flattened_mat = lin_flattened_mat[idx_keep]
+    # print(subset_flattened_mat), print(subset_lin_flattened_mat)
+    # print(Counter(subset_lin_flattened_mat))
+
+    # Remaining
+    remaining_idx_true = np.arange(len(idx_keep))
+    remaining_idx_flattened_mat = np.setdiff1d(np.arange(len(flattened_mat)), idx_remove + idx_keep)
+    # flattened_mat = np.delete(flattened_mat, idx_remove+idx_keep)
+    # lin_flattened_mat = np.delete(lin_flattened_mat, idx_remove+idx_keep)
+    # print(Counter(lin_flattened_mat))
+
+    fold = 5
+    sample_size = int(len(idx_keep) / fold)
+    auc_list = []
+    thresholds = np.linspace(0, 1, 100)
+    np.random.seed(123)
+    print(sample_size)
+    for i in range(fold):
+        print(i)
+        sample_idx = np.random.choice(remaining_idx_flattened_mat, size=sample_size, replace=False)
+        random_subset_flattened_mat = flattened_mat[sample_idx]
+        random_subset_lin_flattened_mat = lin_flattened_mat[sample_idx]
+        remaining_idx_flattened_mat = np.setdiff1d(remaining_idx_flattened_mat, sample_idx)
+
+        sample_idx_true = np.random.choice(remaining_idx_true, size=sample_size, replace=False)
+        random_subset_val = subset_flattened_mat[sample_idx_true]
+        random_subset_lin_val = subset_lin_flattened_mat[sample_idx_true]
+        remaining_idx_true = np.setdiff1d(remaining_idx_true, sample_idx_true)
+
+        final_subset_flattened_mat = np.concatenate([random_subset_val, random_subset_flattened_mat])
+        final_subset_lin_flattened_mat = np.concatenate([random_subset_lin_val, random_subset_lin_flattened_mat])
+        # print(final_subset_flattened_mat)
+        # print(Counter(final_subset_lin_flattened_mat))
+        # fpr, tpr, thresholds = roc_curve(lin_flattened_mat, flattened_mat)
+        fpr, tpr, thresholds = roc_curve(final_subset_lin_flattened_mat, final_subset_flattened_mat)
+        sct_roc_auc = auc(fpr, tpr)
+        if sct_roc_auc < 0.5:
+            sct_roc_auc = 1 - sct_roc_auc
+        print(sct_roc_auc)
+        auc_list.append(sct_roc_auc)
+
+    return auc_list
+
+
 def plot_metrics(model, savePath, run_label_time, showName):
     val_recall, train_recall = model.list_val_recall, model.list_train_recall
     val_rmse, train_rmse = model.list_val_rmse, model.list_train_rmse
@@ -267,7 +322,8 @@ def plotFittingResults(y_pred, y_true, y_pred_val, y_true_val, savePath, run_lab
 
     plt.figure(figsize=(3, 3))
     plt.scatter(y_pred_val, y_true_val, alpha=0.1, s=5, color='#884b91')
-    corr_val = np.corrcoef(y_pred_val, y_true_val)[0, 1]
+    # corr_val = np.corrcoef(y_pred_val, y_true_val)[0, 1]
+    corr_val, p_value = stats.pearsonr(y_pred_val, y_true_val)
     plt.plot([min(min(y_pred_val), min(y_true_val)), max(max(y_pred_val), max(y_true_val))],
              [min(min(y_pred_val), min(y_true_val)), max(max(y_pred_val), max(y_true_val))],
              linestyle='--', color='gray', linewidth=0.7)
@@ -281,7 +337,7 @@ def plotFittingResults(y_pred, y_true, y_pred_val, y_true_val, savePath, run_lab
     plt.tight_layout()
     plt.savefig(savePath + run_label_time + '-RawMatrixValues_compare_val.png')
 
-    return corr
+    return corr_val
 
 
 def sigmoid(x):

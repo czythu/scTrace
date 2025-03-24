@@ -73,17 +73,26 @@ def trainMF(train_df, val_df, n_pre, n_pos, savePath, run_label_time,
         run_label_time = run_label_time + '_keepSv'
     elif bool_pre_side == False and bool_post_side == False:
         run_label_time = run_label_time + '_NoSide'
-    # Keep all side information
     else:
+        print("All side-info available")
+
+    if bool_pre_side == True and bool_post_side == True:
         print("Saving model")
+        np.save(savePath + run_label_time + '-latentU.npy', model.p)
+        np.save(savePath + run_label_time + '-latentV.npy', model.q)
         f = open(savePath + run_label_time + '_model.pkl', 'wb')
         pickle.dump(model, f)
         f.close()
+    else:
+        print("Saving model for ablation experiment")
+        np.save(savePath + run_label_time + '-latentU.npy', model.p)
+        np.save(savePath + run_label_time + '-latentV.npy', model.q)
 
     print("Saving train results")
     val_recall, train_recall = model.list_val_recall, model.list_train_recall
     val_rmse, train_rmse = model.list_val_rmse, model.list_train_rmse
-    training_results = [val_recall, train_recall, val_rmse, train_rmse]
+    val_corr, train_corr = model.list_val_corr, model.list_train_corr
+    training_results = [val_recall, train_recall, val_rmse, train_rmse, val_corr, train_corr]
     np.save(savePath + run_label_time + '.npy', training_results)
 
     plot_metrics(model, savePath, run_label_time, run_label_time)
@@ -91,7 +100,7 @@ def trainMF(train_df, val_df, n_pre, n_pos, savePath, run_label_time,
     return hyper_dict, model
 
 
-def predictMissingEntries(pre_name, pos_name, savePath, run_label_time, showName, threshold_positive=0.25):
+def predictMissingEntries(pre_name, pos_name, savePath, run_label_time, showName):
     print("Loading pretrained model...")
     # with open(savePath + run_label_time + '_model.pkl', 'rb') as file:
     #     model = pickle.load(file)
@@ -102,7 +111,6 @@ def predictMissingEntries(pre_name, pos_name, savePath, run_label_time, showName
     pred_mat = np.dot(model.p, model.q.T)
     y_pred = np.array([pred_mat[int(model.train[i, 0]), int(model.train[i, 1])] for i in range(model.train.shape[0])])
     y_pred_val = np.array([pred_mat[int(model.val[i, 0]), int(model.val[i, 1])] for i in range(model.val.shape[0])])
-    # threshold = threshold_positive
     threshold = min(np.max(model.train[:, 2]) / 2, np.mean(model.train[:, 2]) - 2 * np.std(model.train[:, 2]))
     complet_mat = np.dot(model.p, model.q.T)
     complet_mat[complet_mat < threshold] = 0

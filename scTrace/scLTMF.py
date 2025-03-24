@@ -1,6 +1,7 @@
 # Adapted from https://github.com/luliu8/Probabilistic-Matrix-Factorization-for-Music-Recommendation
 
 import numpy as np
+from scipy import stats
 import time
 
 class scLTMF(object):
@@ -19,6 +20,8 @@ class scLTMF(object):
         self.list_val_rmse = []
         self.list_train_rmse = []
         self.list_val_recall = []
+        self.list_train_corr = []
+        self.list_val_corr = []
         self.list_train_recall = []
         self.n_post_cells = 0
         self.n_pre_cells = 0
@@ -69,11 +72,13 @@ class scLTMF(object):
         Args2: indicators： floats, training rmse, validation rmse, training recall, validation recall.
         """
         end = time.time()
-        train_rmse, val_rmse, train_recall, val_recall = indicators
+        train_rmse, val_rmse, train_recall, val_recall, train_corr, val_corr = indicators
         print('train_rmse: {:.3f}'.format(train_rmse), end=' - ')
         print('val_rmse: {:.3f}'.format(val_rmse), end=' - ')
         print('train_recall: {:.3f}'.format(train_recall), end=' - ')
         print('val_recall: {:.3f}'.format(val_recall), end=' - ')
+        print('train_corr: {:.3f}'.format(train_corr), end=' - ')
+        print('val_corr: {:.3f}'.format(val_corr), end=' - ')
         print('took {:.1f} sec'.format(end - start))
 
 
@@ -83,6 +88,7 @@ class scLTMF(object):
         Args: X (numpy array)
         """
         residuals = []
+        y_pred = []
         non_missing, num_consistent, threshold = 0, 0, thres_consistency
         for i in range(X.shape[0]):
             pre_cell, post_cell, flow = int(X[i, 0]), int(X[i, 1]), X[i, 2]
@@ -108,6 +114,7 @@ class scLTMF(object):
                     pred = np.dot(self.p[pre_cell], self.q[post_cell])
                     # print(e)
             residuals.append(flow - pred)
+            y_pred.append(pred)
             if flow > threshold and pred > threshold:
                 num_consistent += 1
 
@@ -115,8 +122,13 @@ class scLTMF(object):
         residuals = np.array(residuals)
         loss = np.square(residuals).mean()
         rmse = np.sqrt(loss)
+        y_true = X[:, 2]
+        # pred_mat = np.dot(self.p, self.q.T)
+        # y_pred = np.array([pred_mat[int(X[i, 0]), int(X[i, 1])] for i in range(X.shape[0])])
+        # corr = np.corrcoef(y_pred, y_true)[0, 1]
+        corr, p_value = stats.pearsonr(y_pred, y_true)
 
-        return rmse, recall
+        return rmse, recall, corr
 
 
     def _sgd(self):
@@ -148,15 +160,18 @@ class scLTMF(object):
                 self.p[pre_cell] += self.lr * diff_p
                 self.q[post_cell] += self.lr * diff_q
 
-            val_rmse, val_recall = self._compute_metrics(self.val, self.thres_consistency)
-            train_rmse, train_recall = self._compute_metrics(self.train, self.thres_consistency)
+            val_rmse, val_recall, val_corr = self._compute_metrics(self.val, self.thres_consistency)
+            train_rmse, train_recall, train_corr = self._compute_metrics(self.train, self.thres_consistency)
+
             self.list_val_recall.append(val_recall)
             self.list_train_recall.append(train_recall)
+            self.list_val_corr.append(val_corr)
+            self.list_train_corr.append(train_corr)
             self.list_val_rmse.append(val_rmse)
             self.list_train_rmse.append(train_rmse)
             self.min_val = min(val_rmse, self.min_val)
 
-            self._sgd_epoch_end(start_time, indicators=[train_rmse, val_rmse, train_recall, val_recall])
+            self._sgd_epoch_end(start_time, indicators=[train_rmse, val_rmse, train_recall, val_recall, train_corr, val_corr])
 
             # if early stopping and validation rmse didn't reduce enough, then break
             if self.early_stopping and self.list_val_rmse[-1] - self.min_val > 0.01:

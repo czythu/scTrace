@@ -5,7 +5,7 @@
 [![DOI](https://zenodo.org/badge/831262925.svg)](https://doi.org/10.5281/zenodo.15853005)
 
 ## News
-Aug, 2025: scTrace+ was accepted by Cell Systems!
+Aug. 19, 2025: scTrace+ was accepted by _Cell Systems_ !
 
 ## Introduction
 `scTrace+` is a computational method to enhance the cell fate inference by integrating the lineage-tracing and multi-faceted transcriptomic similarity information.
@@ -37,9 +37,9 @@ git clone https://github.com/czythu/scTrace.git
 
 Refer to folder: [tutorial](https://github.com/czythu/scTrace/tree/main/tutorial) for full pipeline.
 
-Example data1: [Larry-Invitro-differentiation](http://lifeome.net/software/scTracePlus/scTrace_demo/Science2020-Larry-example.zip)
+Example data1: [Larry-Invitro-differentiation](http://lifeome.net/software/scTracePlus/scTrace_demo/Science2020-Larry-example.zip) OR [Larry-backup](https://cloud.tsinghua.edu.cn/f/1b94b3229f4a4c52985e/)
 
-Example data2: [TraCe-seq-tumor](http://lifeome.net/software/scTracePlus/scTrace_demo/NBT21-TraCeseq-example.zip)
+Example data2: [TraCe-seq-tumor](http://lifeome.net/software/scTracePlus/scTrace_demo/NBT21-TraCeseq-example.zip) OR [TraCe-seq-backup](https://cloud.tsinghua.edu.cn/f/dae5b3ff8bd04177bd5f/)
 
 Below are the introduction to important functions, consisting of the main steps in `scTrace+`.
 

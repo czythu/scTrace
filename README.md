@@ -37,9 +37,9 @@ git clone https://github.com/czythu/scTrace.git
 
 Refer to folder: [tutorial](https://github.com/czythu/scTrace/tree/main/tutorial) for full pipeline.
 
-Example data1: [Larry-Invitro-differentiation](http://lifeome.net/software/scTracePlus/scTrace_demo/Science2020-Larry-example.zip) OR [Larry-backup](https://cloud.tsinghua.edu.cn/f/1b94b3229f4a4c52985e/)
+Example data1: [Larry-Invitro-differentiation](https://cloud.tsinghua.edu.cn/f/1b94b3229f4a4c52985e/) OR [Larry-backup](http://lifeome.net/software/scTracePlus/scTrace_demo/Science2020-Larry-example.zip) 
 
-Example data2: [TraCe-seq-tumor](http://lifeome.net/software/scTracePlus/scTrace_demo/NBT21-TraCeseq-example.zip) OR [TraCe-seq-backup](https://cloud.tsinghua.edu.cn/f/dae5b3ff8bd04177bd5f/)
+Example data2: [TraCe-seq-tumor](https://cloud.tsinghua.edu.cn/f/dae5b3ff8bd04177bd5f/) OR [TraCe-seq-backup](http://lifeome.net/software/scTracePlus/scTrace_demo/NBT21-TraCeseq-example.zip) 
 
 Below are the introduction to important functions, consisting of the main steps in `scTrace+`.
 
@@ -65,4 +65,4 @@ and transcriptome similarity matrices, both within and across timepoints.
 10. `dynamicDiffAnalysis`: Perform differential expression analysis between all dynamic sub-clusters (1 v.s. rest).
 
 ## Citation
-scTrace+: enhance the cell fate inference by integrating the lineage-tracing and multi-faceted transcriptomic similarity information, Wenbo Guo, Zeyu Chen, Xinqi Li, Jingmin Huang, Qifan Hu, Jin Gu, https://doi.org/10.1101/2024.11.12.623316
+scTrace+: enhance the cell fate inference by integrating the lineage-tracing and multi-faceted transcriptomic similarity information, Wenbo Guo#, Zeyu Chen#, Xinqi Li, Jingmin Huang, Qifan Hu, Jin Gu, https://doi.org/10.1101/2024.11.12.623316

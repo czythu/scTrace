@@ -6,6 +6,7 @@
 
 ## News
 Aug. 19, 2025: scTrace+ was accepted by _Cell Systems_ !
+
 Sep. 10, 2025: scTrace+ was published online: [https://doi.org/10.1016/j.cels.2025.101398](https://doi.org/10.1016/j.cels.2025.101398)
 
 ## Introduction
